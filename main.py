@@ -6,7 +6,7 @@ import openai
 # context.
 
 # open ai gpt
-openai.api_key ='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'
+openai.api_key ='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'
 
 def aiBot(txt):
     response = openai.Completion.create(
