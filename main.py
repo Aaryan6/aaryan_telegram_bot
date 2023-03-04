@@ -1,12 +1,16 @@
 from telegram import Update
 from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters
-import openai
+import openai 
+import os 
+from dotenv import load_dotenv 
+
+load_dotenv()
 
 # Define a few command handlers. These usually take the two arguments update and
 # context.
 
 # open ai gpt
-openai.api_key ='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'
+openai.api_key =os.getenv('OPENAI_KEY')
 
 def aiBot(txt):
     response = openai.Completion.create(
@@ -43,7 +47,7 @@ async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 def main() -> None:
     """Start the bot."""
     # Create the Application and pass it your bot's token.
-    application = Application.builder().token('6242418841:AAHogKrTkS07Yq1VZRJZg13ECmv09CYhkOo').build()
+    application = Application.builder().token(os.getenv('TELEGRAM_KEY')).build()
 
     # on different commands - answer in Telegram
     application.add_handler(CommandHandler("start", start))
