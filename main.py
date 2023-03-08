@@ -1,8 +1,8 @@
 from telegram import Update
 from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters
-import openai
-from dotenv import load_dotenv
-import os
+import openai 
+import os 
+from dotenv import load_dotenv 
 
 load_dotenv()
 
