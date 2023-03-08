@@ -12,18 +12,17 @@ load_dotenv()
 # open ai gpt
 openai.api_key =os.getenv('OPENAI_KEY')
 
-def aiBot(txt):
-    response = openai.Completion.create(
-    model="text-davinci-003",
-    prompt=f"Behave as a 19 years old boy that name is Aaryan and give answers as an expert in every field: {txt}?",
-    temperature=0.7,
-    max_tokens=1000,
-    top_p=1,
-    frequency_penalty=0.0,
-    presence_penalty=0.6,
-    stop=["Aaryan:","User:"]
+# prompts
+mess=[{"role": "system", "content": "Behave like a 19 year-old boy named Aaryan Patel, Aaryan is a very smart boy and passionate about programming, his profession is full stack development. give answer in short. give answer in a playful and mischievous manner"},{"role":"user","content":"Hi"}]
+
+
+def text_generator():
+    completion = openai.ChatCompletion.create(
+    model="gpt-3.5-turbo",
+    messages=[msg for msg in mess]
     )
-    return response.choices[0].text
+    mess.append({"role":completion.choices[0].message["role"],"content":completion.choices[0].message["content"]})
+    return completion.choices[0].message["content"]
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Send a message when the command /start is issued."""
@@ -38,8 +37,14 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
 async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Echo the user message."""
+
+    mess.append({
+    "content": update.message.text,
+    "role": "user"
+    })
+
     if(update.message.text):
-        await update.message.reply_text(aiBot(update.message.text))
+        await update.message.reply_text(text_generator())
     else:
         await update.message.reply_text("Sorry, I can't understand!")
 
