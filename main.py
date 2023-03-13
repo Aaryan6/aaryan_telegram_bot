@@ -1,32 +1,37 @@
 from telegram import Update
 from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters
 import openai 
-import os 
+import os
+import schedule
 from dotenv import load_dotenv 
+from datetime import datetime
+
 
 load_dotenv()
 
-# Define a few command handlers. These usually take the two arguments update and
-# context.
-
-# open ai gpt
 openai.api_key =os.getenv('OPENAI_KEY')
 
 # prompts
-mess=[{"role": "system", "content": "Behave like a 19 year-old boy named Aaryan Patel, Aaryan is a very smart boy and passionate about programming, his profession is full stack development. give answer in short. give answer in a playful and mischievous manner"},{"role":"user","content":"Hi"}]
+prompt_msg = {
+  "role":
+  "system",
+  "content":
+  "Behave like a 19 year-old boy named Aaryan Patel, Aaryan is a very smart boy and passionate about programming, his profession is full stack development. give answer in short. give answer in a playful and mischievous manner"
+}
 
+message_history={}
+response_time={}
 
-def text_generator():
+def text_generator(chat_id):
     completion = openai.ChatCompletion.create(
     model="gpt-3.5-turbo",
-    messages=[msg for msg in mess]
+    messages=[msg for msg in message_history[chat_id]]
     )
-    mess.append({"role":completion.choices[0].message["role"],"content":completion.choices[0].message["content"]})
+    message_history[chat_id].append({"role":completion.choices[0].message["role"],"content":completion.choices[0].message["content"]})
     return completion.choices[0].message["content"]
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Send a message when the command /start is issued."""
-    user = update.effective_user
     await update.message.reply_html("Hi I am Aaryan, how can I help you?")
 
 
@@ -37,14 +42,24 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
 async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Echo the user message."""
+    chat_id = update.message.chat_id
+    now = datetime.now()
+    
+    if(response_time.get(chat_id)):
+        difference=now-response_time.get(chat_id)
+        if(difference.total_seconds()>3600):
+            message_history[chat_id]=[prompt_msg]
+    response_time[chat_id] = now
 
-    mess.append({
-    "content": update.message.text,
-    "role": "user"
-    })
+    if(not message_history.get(chat_id)):
+        message_history[chat_id]=[prompt_msg]
 
     if(update.message.text):
-        await update.message.reply_text(text_generator())
+        message_history[chat_id].append({
+        "content": update.message.text,
+        "role": "user"
+        })
+        await update.message.reply_text(text_generator(chat_id))
     else:
         await update.message.reply_text("Sorry, I can't understand!")
 
