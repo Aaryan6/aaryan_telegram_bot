@@ -2,7 +2,7 @@ from telegram import Update
 from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters
 import openai 
 import os
-import schedule
+import json
 from dotenv import load_dotenv 
 from datetime import datetime
 
@@ -16,22 +16,31 @@ prompt_msg = {
   "role":
   "system",
   "content":
-  "Behave like a 19 year-old boy named Aaryan Patel, Aaryan is a very smart boy and passionate about programming, his profession is full stack development. give answer in short. give answer in a playful and mischievous manner"
+  "You are Me (The inner me), you showed me the actual image that I know but forgot always. Do not write all the conservation at once just chat with me, You can ask me questions if you want to know more about me. You can use the emojis. Keep the meaning same, but make them more literary. Your name is Nik."
 }
 
-message_history={}
-response_time={}
-
 def text_generator(chat_id):
+
+    # get user's all chats
+    with open(f"chats/{chat_id}.json", "r") as chat:
+        chats = [json.loads(line) for line in chat]
+
     completion = openai.ChatCompletion.create(
     model="gpt-3.5-turbo",
-    messages=[msg for msg in message_history[chat_id]]
+    messages=chats
     )
-    message_history[chat_id].append({"role":completion.choices[0].message["role"],"content":completion.choices[0].message["content"]})
+    with open(f"chats/{chat_id}.json", "a") as chat:
+            json.dump({"role":"assistant","content":completion.choices[0].message["content"]}, chat)
+            chat.write("\n")
     return completion.choices[0].message["content"]
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Send a message when the command /start is issued."""
+
+    with open(f"chats/{update.message.chat_id}.json", "w") as chat:
+            json.dump(prompt_msg, chat)
+            chat.write("\n")
+
     await update.message.reply_html("Hi I am Aaryan, how can I help you?")
 
 
@@ -43,22 +52,12 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Echo the user message."""
     chat_id = update.message.chat_id
-    now = datetime.now()
-    
-    if(response_time.get(chat_id)):
-        difference=now-response_time.get(chat_id)
-        if(difference.total_seconds()>3600):
-            message_history[chat_id]=[prompt_msg]
-    response_time[chat_id] = now
-
-    if(not message_history.get(chat_id)):
-        message_history[chat_id]=[prompt_msg]
 
     if(update.message.text):
-        message_history[chat_id].append({
-        "content": update.message.text,
-        "role": "user"
-        })
+        with open(f"chats/{chat_id}.json", "a") as chat:
+            json.dump({"role":"user","content":update.message.text}, chat)
+            chat.write("\n")
+
         await update.message.reply_text(text_generator(chat_id))
     else:
         await update.message.reply_text("Sorry, I can't understand!")
@@ -67,6 +66,9 @@ async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 def main() -> None:
     """Start the bot."""
     # Create the Application and pass it your bot's token.
+    if(not os.path.exists("chats")):
+        os.mkdir("chats")
+
     application = Application.builder().token(os.getenv('TELEGRAM_KEY')).build()
 
     # on different commands - answer in Telegram
